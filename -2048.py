@@ -9,10 +9,10 @@ from random import *
 
 pygame.init()
 
-board_width = 5
-board_height = 5
+board_width = 30
+board_height = 30
 
-SCREEN_WIDTH = 30 * board_width
+SCREEN_WIDTH = 30 * board_width 
 SCREEN_HEIGHT = 30 * board_height
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
@@ -76,33 +76,60 @@ spawn()
 print(f"position: {idx}, value: {idx_2}")
 
 def collide(position, direction):
+    newposition = position
     collided = 0
     if direction == "left":
-        while (position % board_width != 0) and collided == 0:
-            if grid[position-1] == 0: # open space, move there
-                position -= 1
-            else: # collide 
+        while (newposition % board_width != 0) and collided == 0:
+            if grid[newposition-1] == 0: # open space, move there
+                newposition -= 1
+            else: # collide
+                # if newposition-2 >= 0:
+                if grid [newposition-1] == grid[newposition]:
+                    return f"m{newposition-1}"
                 collided = 1 
-            print(f"position: {position} - collided: {collided}")
-        return position
-
+        return newposition 
+    
     elif direction == "right":
-        pass
+        while (newposition % board_width != board_width-1) and collided == 0:
+            if grid[newposition+1] == 0: # open space, move there
+                newposition += 1
+            else: # collide 
+                # if newposition+2 < len(grid):
+                #     print(newposition+2)
+                #     if grid [newposition+2] == grid[newposition]:
+                #         return f"m{newposition+1}"
+                collided = 1 
+        return newposition
+    
     elif direction == "up":
-        variation = board_width
-        pass
+        while (newposition - board_width >= 0) and collided == 0:
+            if grid[newposition - board_width] == 0: # open space, move there
+                newposition -= board_width
+            else: # collide 
+                # if newposition - board_width - 1 >= 0:
+                #     if grid [newposition - board_width - 1] == grid[newposition]:
+                #         return f"m{newposition-board_width}"
+                collided = 1 
+        return newposition
+    
     else:
-        variaton = -board_width
+        while (newposition + board_width <= len(grid)-1) and collided == 0:
+            if grid[newposition + board_width] == 0: # open space, move there
+                newposition += board_width
+            else: # collide 
+                # if newposition + board_width + 1 < len(grid):
+                #     if grid [newposition + board_width + 1] == grid[newposition]:
+                #         return f"m{newposition+board_width}"
+                collided = 1 
+        return newposition
 
-
-print(f"FINAL POSITION AFTER COLLIDING: {collide(2,"left")}")
 
 # Main Loop
 while run: 
     clock.tick(30)
     for i in range (0, board_height): # Draw every square
         for n in range (0, board_width) : 
-            print(i*board_width+n)
+            # print(f"square prinited: {i*board_width+n}")
             if grid[i*board_width+n] == 0:
                 sprite_n = 0
             else:
@@ -123,18 +150,45 @@ while run:
     elif key[pygame.K_DOWN] == True:
         kbinp = "down"
     
-    if kbinp: # if player moves
-        for i in range (board_height): # depends on direction: if you move left, collision detection is left to right to prevent right blocks from colliding with left blocks that haven't been yet placed)
-            for n in range (board_width):
-                if grid[i*board_width+n] != 0:
-                    currentpos = i*board_width+n
-                    newpos = collide(currentpos, kbinp)
-                    if newpos != currentpos:
-                        grid[newpos] = grid[currentpos]
-                        grid[currentpos] = 0
-                    
+    if kbinp: # if player inputs   
+        # initialize the direction and orientation in which is scanned the grid for collision detection
+        scandir_type = (kbinp == "up" or kbinp == "down") * 1 # horizontal = 0, vertical = 1
+        scandir = 1 - (kbinp == "down" or kbinp == "right") * 2 # up/left = 1, down/right = -1
 
-    print(kbinp)
+
+        position_y = 0
+        if scandir_type == 1 and scandir == -1:
+                position_y = board_height-1 # if you press down, collision starts scanning grid from the bottom
+        for i in range (board_height):
+            # reset x position every y change
+            if scandir == 1:    
+                position_x = 0
+            else:
+                position_x = board_width-1
+            # horizontally scan all blocks at this y position
+            for n in range (board_width):
+                print(f"{n} ,{position_y}, val:{position_y*board_width+position_x}")
+                if grid[position_y*board_width+position_x] != 0: # if not an empty block, check collision
+                    currentpos = position_y*board_width+position_x
+                    newpos = collide(currentpos, kbinp)                        
+
+                    if newpos != currentpos: # if position updated, write position to grid
+                        if "m" in str(newpos):
+                            newpos = newpos.replace("m","")
+                            grid[int(newpos)] = grid[currentpos] * 2
+                        else:
+                            grid[newpos] = grid[currentpos]
+                        grid[currentpos] = 0
+                position_x += scandir
+            position_y = position_y + 1 - ((scandir_type == 1 and scandir == -1) *2)
+        pass
+    
+    if key[pygame.K_SPACE] == True:
+        if block_n < 2 or randint(0,1) == 1:
+            spawn()
+
+    print(kbinp) 
+    
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
