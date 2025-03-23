@@ -9,8 +9,8 @@ from random import *
 
 pygame.init()
 
-board_width = 30
-board_height = 30
+board_width = 5
+board_height = 6
 
 SCREEN_WIDTH = 30 * board_width 
 SCREEN_HEIGHT = 30 * board_height
@@ -84,7 +84,7 @@ def collide(position, direction):
                 newposition -= 1
             else: # collide
                 # if newposition-2 >= 0:
-                if grid [newposition-1] == grid[newposition]:
+                if grid [newposition-1] == grid[position]:
                     return f"m{newposition-1}"
                 collided = 1 
         return newposition 
@@ -94,10 +94,10 @@ def collide(position, direction):
             if grid[newposition+1] == 0: # open space, move there
                 newposition += 1
             else: # collide 
-                # if newposition+2 < len(grid):
-                #     print(newposition+2)
-                #     if grid [newposition+2] == grid[newposition]:
-                #         return f"m{newposition+1}"
+                if newposition+1 < len(grid):
+                    # print(newposition+1)
+                    if grid [newposition+1] == grid[position]:
+                        return f"m{newposition+1}"
                 collided = 1 
         return newposition
     
@@ -106,9 +106,9 @@ def collide(position, direction):
             if grid[newposition - board_width] == 0: # open space, move there
                 newposition -= board_width
             else: # collide 
-                # if newposition - board_width - 1 >= 0:
-                #     if grid [newposition - board_width - 1] == grid[newposition]:
-                #         return f"m{newposition-board_width}"
+                if newposition - board_width >= 0:
+                    if grid [newposition - board_width ] == grid[position]:
+                        return f"m{newposition - board_width}"
                 collided = 1 
         return newposition
     
@@ -117,10 +117,10 @@ def collide(position, direction):
             if grid[newposition + board_width] == 0: # open space, move there
                 newposition += board_width
             else: # collide 
-                # if newposition + board_width + 1 < len(grid):
-                #     if grid [newposition + board_width + 1] == grid[newposition]:
-                #         return f"m{newposition+board_width}"
-                collided = 1 
+                if newposition + board_width  < len(grid):
+                    if grid [newposition + board_width] == grid[position]:
+                        return f"m{newposition+board_width}"
+                    collided = 1 
         return newposition
 
 
