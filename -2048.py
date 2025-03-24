@@ -43,6 +43,8 @@ sprites = [pygame.Surface.convert(pygame.image.load("grid.png")), pygame.Surface
 kbinp = "" # last keyboard input4
 idx = ""
 idx_2 = ""
+new_block_pos = []
+new_block_fade = 255
 level = 1 # this is the rng cap (when reaching higher numbers, it increases the integer cap, this way you can only get integers you've already gotten before)
 
 
@@ -57,7 +59,9 @@ def spawn(): # spawns a block
         lost += 1
         if lost > len(grid):
             idx = "lose"
+            new_block_pos.append(idx)
             return idx
+    new_block_pos.append(idx)
     
     # assign a number to this block:
     idx_2 = expovariate()
@@ -127,6 +131,8 @@ def collide(position, direction):
 # Main Loop
 while run: 
     clock.tick(30)
+
+    
     for i in range (0, board_height): # Draw every square
         for n in range (0, board_width) : 
             # print(f"square prinited: {i*board_width+n}")
@@ -134,7 +140,9 @@ while run:
                 sprite_n = 0
             else:
                 sprite_n = possible_integers.index(grid[i*board_width+n]) + 1
-            screen.blit(sprites[sprite_n], (n*30,i*30))
+            todraw = sprites[sprite_n]
+            todraw.set_alpha( 255- ((i*board_width+n in new_block_pos) * new_block_fade) )
+            screen.blit(todraw, (n*30,i*30))
 
 
     
@@ -180,15 +188,43 @@ while run:
                             grid[newpos] = grid[currentpos]
                         grid[currentpos] = 0
                 position_x += scandir
-            position_y = position_y + 1 - ((scandir_type == 1 and scandir == -1) *2)
+            position_y = position_y + 1 - ((scandir_type == 1 and scandir == -1) *2) 
+        
+        new_block_pos = [] # reset blocks fade-in list
+        new_block_fade = 255 # reset global fade-in value for blocks
+        
+        check_repeat = []
+        for i in range (len(grid)):
+            if not grid[i] in check_repeat or grid[i] == 0:
+                check_repeat.append(grid[i])                
+            else: 
+                break
+        
+        if len(check_repeat) < len(grid):
+            if randint(0,2) == 1 :
+                spawn()
+        else:
+            spawn()
+            max_spawn = floor(len(grid)/30)
+            if max_spawn < 1:
+                max_spawn = 1
+            
+            for i in range (max_spawn):
+                if randint(0,2) == 0:
+                    spawn()
+                    
+                    
+
         pass
-    
+
+    new_block_fade -= 25
+
     if key[pygame.K_SPACE] == True:
         if block_n < 2 or randint(0,1) == 1:
+            new_block_fade = 255
             spawn()
 
-    print(kbinp) 
-    
+    print(new_block_pos)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
