@@ -31,17 +31,19 @@ while gridlen < board_width * board_height :
 
 possible_integers = [1]
 gridlen = 2
-while gridlen < 16:
+while gridlen < 32:
     possible_integers.append(gridlen)
     gridlen = gridlen * 2
 # print(randint(0,len(possible_integers)))
 
 # Load Sprites
-sprites = [pygame.Surface.convert(pygame.image.load("grid.png")), pygame.Surface.convert(pygame.image.load("1.png")), pygame.Surface.convert(pygame.image.load("2.png")), pygame.Surface.convert(pygame.image.load("4.png")), pygame.Surface.convert(pygame.image.load("8.png"))]
-sprites = []
+
+# sprites = [pygame.Surface.convert(pygame.image.load("grid.png")), pygame.Surface.convert(pygame.image.load("1.png")), pygame.Surface.convert(pygame.image.load("2.png")), pygame.Surface.convert(pygame.image.load("4.png")), pygame.Surface.convert(pygame.image.load("8.png"))]
+# sprites = []
 
 sprites = {
-    "0" : pygame.Surface.convert(pygame.image.load("grid.png"))
+    "0" : pygame.Surface.convert(pygame.image.load("grid.png")),
+    "solid" : pygame.Surface.convert(pygame.image.load("solid.png"))
 
 }
 
@@ -77,10 +79,13 @@ def spawn(type): # spawns a block
     new_block_pos.append(idx)
     
     # assign a number to this block:
-    idx_2 = expovariate()
-    if idx_2 > level:
-        idx_2 = 0
-    idx_2 = possible_integers[floor(idx_2)]
+    if type ==  "solid": 
+        idx_2 = "solid"
+    else:
+        idx_2 = expovariate()
+        if idx_2 > level:
+            idx_2 = 0
+        idx_2 = possible_integers[floor(idx_2)]
     print(f"step 2: {idx_2}")
 
     # write block to grid
@@ -152,9 +157,9 @@ while run:
             if grid[i*board_width+n] == 0:
                 sprite_n = 0
             else:
-                sprite_n = possible_integers.index(grid[i*board_width+n]) + 1
+                # sprite_n = possible_integers.index(grid[i*board_width+n]) + 1
                 sprite_n = grid[i*board_width+n]
-            print(sprite_n)
+            # print(sprite_n)
             todraw = sprites[str(sprite_n)]
             todraw.set_alpha( 255 - ((i*board_width+n in new_block_pos) * new_block_fade) )
             screen.blit(todraw, (n*30,i*30))
@@ -197,7 +202,11 @@ while run:
             # horizontally scan all blocks at this y position
             for n in range (board_width):
                 print(f"{n} ,{position_y}, val:{position_y*board_width+position_x}")
-                if grid[position_y*board_width+position_x] != 0: # if not an empty block, check collision
+
+                if grid[position_y*board_width+position_x] == "solid": # if solid, don't move
+                    pass
+
+                elif grid[position_y*board_width+position_x] != 0: # else (if block is movable) if not an empty block, check collision
                     currentpos = position_y*board_width+position_x
                     newpos = collide(currentpos, kbinp)                        
 
@@ -251,7 +260,7 @@ while run:
     #         spawn("")
 
     if key[pygame.K_SPACE] == True:
-        spawn("solid") # USE A DICTIONARY TO ASSIGN A VALUE TO A SPRITE
+        spawn("solid") # USE A DICTIONARY TO ASSIGN A VALUE TO A SPRITE + MAKE SFX AND PARTICLES AND ANIMATIONS
 
     # print(new_block_pos)
 
