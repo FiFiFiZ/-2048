@@ -11,6 +11,7 @@ from random import *
 # a block that throws a square coming across it to another direction
 
 # fix merging more than 2 blocks at once working only on certain directions
+# fix big number blocks (that don't have a texture size of 30x30) to match correct position (and blit properly, maybe just make them 30x30 too)
 
 # Initial Setup
 pygame.init()
@@ -61,8 +62,8 @@ non_collidables = [0, "minus"] # blocks that can't be collided with
 
 def setup(setup_menu):
     global board_width, board_height, SCREEN_HEIGHT, SCREEN_WIDTH, screen, grid, possible_integers, kbinp, new_block_pos, new_block_fade, level, game_lost, selected, mousec, score, special_grid # i found out too late that this was bad practice, i will take note of that in the future :P
-    board_width = 4
-    board_height = 4
+    board_width = 11
+    board_height = 6
     
     SCREEN_WIDTH = 30 * board_width
     SCREEN_HEIGHT = 30 * (board_height + 1)
@@ -175,7 +176,7 @@ def checksolid(idx): # check if spawning solid block is in immediate diagonal vi
             print(f"OFF-GRID, SKIPPED: {list_of_spots_to_check[i]}")
             pass
         else:
-            if floor(list_of_spots_to_check[i]/board_width) != list_of_lines[i]: # if off-grid (here the square position actually corresponds to another one that isn't intended)
+            if floor(list_of_spots_to_check[i]/board_width) != list_of_lines[i] or list_of_lines[i] not in range (0,len(grid)-1): # if off-grid (here the square position actually corresponds to another one that isn't intended)
                 print(i)
                 print(f"OFF-GRID, SKIPPED: {list_of_spots_to_check[i]}")
                 pass
@@ -485,7 +486,7 @@ while run:
     elif menu == "main":
         screen.fill((0,0,0)) # refresh screen
         print(pygame.time.get_ticks())
-        screen.blit(sprites["logo"], (30*1,15+sin(pygame.time.get_ticks()/200)*3.5))
+        screen.blit(sprites["logo"], (((board_width*30-46)/2),15+sin(pygame.time.get_ticks()/200)*3.5))
         key = pygame.key.get_just_pressed()
         if key[pygame.K_SPACE] == True:
             menu = "in-game"
