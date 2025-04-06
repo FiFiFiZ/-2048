@@ -6,6 +6,11 @@ from random import *
 # Maybe a specific square in the grid could have diffeerent effects on whatever block passes on it, giving a whole new layer of strategy and planning.
 # A funny condition like "if you get a 64, you lose (you have to work things around to not get that)"
 
+# remove blocks from fade list or add a fade to every single grid cell
+# a block like the negator could take effect only when a block collides with it, maybe other blocks could be ghost
+# a block that throws a square coming across it to another direction
+
+# fix merging more than 2 blocks at once working only on certain directions
 
 # Initial Setup
 pygame.init()
@@ -161,7 +166,7 @@ def checksolid(idx): # check if spawning solid block is in immediate diagonal vi
     list_of_lines = [floor(idx/board_width)+1, floor(idx/board_width)+1, floor(idx/board_width)-1, floor(idx/board_width)-1]
 
     print(f"fijqspfjqspofjsqpf {list_of_spots_to_check}")
-    for i in range(0, len(list_of_spots_to_check))  :
+    for i in range(len(list_of_spots_to_check))  :
         print(f"iteration: {i}")
         try:
             test = grid[list_of_spots_to_check[i]]
@@ -170,7 +175,7 @@ def checksolid(idx): # check if spawning solid block is in immediate diagonal vi
             print(f"OFF-GRID, SKIPPED: {list_of_spots_to_check[i]}")
             pass
         else:
-            if floor(list_of_spots_to_check[i]/5) != list_of_lines[i]: # if off-grid (here the square position actually corresponds to another one that isn't intended)
+            if floor(list_of_spots_to_check[i]/board_width) != list_of_lines[i]: # if off-grid (here the square position actually corresponds to another one that isn't intended)
                 print(i)
                 print(f"OFF-GRID, SKIPPED: {list_of_spots_to_check[i]}")
                 pass
@@ -183,7 +188,6 @@ def checksolid(idx): # check if spawning solid block is in immediate diagonal vi
     print(f"IT CAN SPAWN")
     return False
 
-
 def spawn(type): # spawns a block
     global game_lost
     lost = 0
@@ -192,9 +196,11 @@ def spawn(type): # spawns a block
     if type == "solid":
         solid_not_spawnable = checksolid(idx)
     print(f"step 1: {idx}")
-    while grid[idx] != 0 and ((type == "solid" and solid_not_spawnable == True) or (not type == "solid" and ((type == "minus" and special_grid[idx] != 0) or not type == "minus"))): # look for the next open position if needed
+    print(f"if true, there is no gridpsace: {grid[idx] != 0}   if true, there is no specialspace: {((type == "solid" and solid_not_spawnable == True) or (not type == "solid" and ((type == "minus" and special_grid[idx] != 0) or not type == "minus")))}    if True, continue: {grid[idx] != 0 and ((type == "solid" and solid_not_spawnable == True) or (not type == "solid" and ((type == "minus" and special_grid[idx] != 0) or not type == "minus")))}")
+    while grid[idx] != 0 or (type == "solid" and solid_not_spawnable == True) or (type == "minus" and special_grid[idx] != 0): # look for the next open position if needed
         idx = (idx + 1) % len(grid)
         lost += 1
+        print(str(idx) + " " + str(lost))
         if type == "solid":
             solid_not_spawnable = checksolid(idx)
             if lost > len(grid):
@@ -205,10 +211,15 @@ def spawn(type): # spawns a block
             if lost > len(grid):
                 print(grid)
                 print(special_grid)
-                exit()
+                # exit()
                 # game_lost = 1
                 # new_block_pos.append(idx)
                 return
+    print(f"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW what there is at this spot: {special_grid[idx]} //// {not type == "solid" and (type == "minus" and special_grid[idx] != 0)} //// {grid[idx] != 0} //// {grid[idx] != 0 and ((type == "solid" and solid_not_spawnable == True) or (not type == "solid" and ((type == "minus" and special_grid[idx] != 0) or not type == "minus")))}") 
+
+# add a if grid.count(0) > 0 to check whether or not there even is an instance and find the closest one to the random number generated
+
+
     if not solid_not_spawnable == True:
         new_block_pos.append(idx)
         print(f"what we spawned: {idx}, at iteration: {i}")
@@ -231,7 +242,7 @@ def spawn(type): # spawns a block
         special_grid[idx] = idx_2
     else:
         grid[idx] = idx_2 #idx_2
-    print(f"step 3: {grid}")
+    print(f"step 3: {special_grid}")
     print(f"fade list: {new_block_pos}")
 
 
@@ -304,7 +315,7 @@ def rendergrid():
             todraw2 = special_grid[i*board_width+n]
             if todraw2 != 0:
                 todraw2 = sprites[todraw2]
-                if grid[sprite_n] != 0:
+                if sprite_n != 0:
                     todraw2.set_alpha(170)
                 else:
                     todraw2.set_alpha(240)
