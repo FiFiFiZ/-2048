@@ -2,6 +2,8 @@ import pygame
 from math import *
 from random import *
 
+import pygame.surface
+
 # Concept: 2048 but with Negative Blocks, Divide Blocks, allowing for different outcomes and contraptions. Try to get to -2048!
 # Maybe a specific square in the grid could have diffeerent effects on whatever block passes on it, giving a whole new layer of strategy and planning.
 # A funny condition like "if you get a 64, you lose (you have to work things around to not get that)"
@@ -55,15 +57,30 @@ pygame.mixer.music.load("src\music\SNES Classic Edition Menu Song.mp3")
 pygame.mixer.music.play(-1)
 pygame.mixer.music.set_volume(0.05)
 
+sounds = {
+    "merge" : pygame.mixer.Sound("src\sfx\game_merge.wav"),
+    "hoverover" : pygame.mixer.Sound("src\sfx\menu_hoverover.wav"),
+    "select" : pygame.mixer.Sound("src\sfx\menu_select.wav")
+}
+
+channels = {
+}
+
+for i in range (3):
+    channels[i] = pygame.mixer.Channel(i)
+    channels[i].set_volume(0.1)
+
 mousec = 0
 non_collidables = [0, "minus"] # blocks that can't be collided with
+selected = "" # selected button on ui
+selected_time = 0
 
 # Define Methods
 
 def setup(setup_menu):
-    global board_width, board_height, SCREEN_HEIGHT, SCREEN_WIDTH, screen, grid, possible_integers, kbinp, new_block_pos, new_block_fade, level, game_lost, selected, mousec, score, special_grid # i found out too late that this was bad practice, i will take note of that in the future :P
-    board_width = 11
-    board_height = 6
+    global board_width, board_height, SCREEN_HEIGHT, SCREEN_WIDTH, screen, grid, possible_integers, kbinp, new_block_pos, new_block_fade, level, game_lost, selected, mousec, score, special_grid, already_merged, todraw_size # i found out too late that this was bad practice, i will take note of that in the future :P
+    board_width = 5
+    board_height = 5
     
     SCREEN_WIDTH = 30 * board_width
     SCREEN_HEIGHT = 30 * (board_height + 1)
@@ -87,14 +104,15 @@ def setup(setup_menu):
     new_block_fade = 255
     level = 2 # this is the rng cap (when reaching higher numbers, it increases the integer cap, this way you can only get integers you've already gotten before)
     game_lost = 0
-    selected = "" # selected button on ui
     score = 0   
+    already_merged = []
+    todraw_size = 1
 
     spawn("") 
     spawn("")
 
 def button (name, x ,y):
-    global menu, mousec
+    global menu, mousec, selected_time
     width = pygame.Surface.get_width(sprites[f"{name}0"])
     height = pygame.Surface.get_height(sprites[f"{name}0"])
     # Rect(x, y, pygame.Surface.get_width(sprites[f"{name}0"])), pygame.Surface.get_width(sprites[f"{name}0"])
@@ -102,6 +120,8 @@ def button (name, x ,y):
     if x_sprite in range (x ,x+width) and y_sprite in range (y, y+height):
         hovered_over = 1
         global selected
+        if selected != name:
+            selected_time = 0
         selected = name
     else:
         global game_lost
@@ -112,11 +132,19 @@ def button (name, x ,y):
                 hovered_over = 0
         else:
             hovered_over = 0
+            if selected == name:
+                selected = 0
+
+    if hovered_over > 0 and selected_time == 0:
+        channels[1].play(sounds["hoverover"])
+
 
     if ((hovered_over == 1 and mousec == 1) or (hovered_over > 0 and key[pygame.K_SPACE] == 1)) == True:
         if name == "restart":
+            channels[0].play(sounds["select"])
             setup(menu)
         if name == "exit":
+            channels[0].play(sounds["select"])
             menu = "main"
             setup(menu)
 
@@ -296,6 +324,8 @@ def collide(position, direction):
         return newposition
 
 def rendergrid():
+    global todraw_size
+
     for i in range (0, board_height): # Draw every square
         for n in range (0, board_width) : 
             # print(f"square prinited: {i*board_width+n}")
@@ -310,8 +340,12 @@ def rendergrid():
                 todraw.set_alpha(255 - ((i*board_width+n in new_block_pos) * new_block_fade))
             else:
                 todraw.set_alpha(122)
-            offset_board = (SCREEN_WIDTH != board_width*30) * (SCREEN_WIDTH - board_width*30)/2
-            screen.blit(todraw, (n*30+offset_board,i*30))
+            if str(i*board_width+n) in already_merged:
+                print(todraw_size)
+                todraw = pygame.transform.smoothscale_by(todraw, todraw_size)
+            offset_board = (SCREEN_WIDTH != board_width*30) * (SCREEN_WIDTH - board_width*30)/244
+            offset_square = (pygame.Surface.get_width(todraw) - 30)/2
+            screen.blit(todraw, (n*30+offset_board-offset_square,i*30-offset_square))
 
             todraw2 = special_grid[i*board_width+n]
             if todraw2 != 0:
@@ -370,6 +404,7 @@ while run:
                 scandir_type = (kbinp == "up" or kbinp == "down") * 1 # horizontal = 0, vertical = 1
                 scandir = 1 - (kbinp == "down" or kbinp == "right") * 2 # up/left = 1, down/right = -1
 
+                already_merged = []
 
                 position_y = 0
                 if scandir_type == 1 and scandir == -1:
@@ -394,11 +429,13 @@ while run:
                             if newpos != currentpos: # if position updated, write position to grid
                                 grid_changed = 1 # grid has been modified
 
-                                if "m" in str(newpos):
+                                if "m" in str(newpos) and not newpos in already_merged:
                                     newpos = newpos.replace("m","")
-                                    grid[int(newpos)] = grid[currentpos] * 2
+                                    grid[int(newpos)] = grid[currentpos] * 2 
+                                    already_merged.append(newpos)
                                     grid_changed = 2 # there's been a merge 
                                     score += grid[int(newpos)]
+                                    channels[2].play(sounds["merge"])
                                 else:
                                     grid[newpos] = grid[currentpos]
                                 grid[currentpos] = 0
@@ -411,6 +448,7 @@ while run:
                     
                     new_block_pos = [] # reset blocks fade-in list
                     new_block_fade = 255 # reset global fade-in value for blocks
+                    todraw_size = 1.6
                 
                     spawn("")  # spawns a new number
                     max_spawn = floor(len(grid)/30)
@@ -426,6 +464,8 @@ while run:
 
 
             new_block_fade -= 45
+            selected_time += 1
+            todraw_size += (1-todraw_size)/3
 
             # if key[pygame.K_SPACE] == True:
             #     if block_n < 2 or randint(0,1) == 1:
