@@ -34,7 +34,15 @@ sprites = {
     "restart1" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\RESTART1.png")),
     "screenend" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\screenend.png")),
     "SCORE" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\SCORE.png")),
-    "minus" : pygame.Surface.convert(pygame.image.load("src\images\sprites\minus.png"))
+    "minus" : pygame.Surface.convert(pygame.image.load("src\images\sprites\minus.png")),
+    "ps" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\PRESS SPACE.png")),
+    "bh0" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\BOARD HEIGHT0.png")),
+    "bh1" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\BOARD HEIGHT1.png")),
+    "bw0" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\BOARD WIDTH0.png")),
+    "bw1" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\BOARD WIDTH1.png")),
+    "left" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\left.png")),
+    "right" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\right.png"))
+
 
 }
 
@@ -79,8 +87,12 @@ selected_time = 0
 
 def setup(setup_menu):
     global board_width, board_height, SCREEN_HEIGHT, SCREEN_WIDTH, screen, grid, possible_integers, kbinp, new_block_pos, new_block_fade, level, game_lost, selected, mousec, score, special_grid, already_merged, todraw_size # i found out too late that this was bad practice, i will take note of that in the future :P
-    board_width = 5
-    board_height = 5
+    if setup_menu == "main":
+        board_width = 6
+        board_height = 5
+        selected = "bw"
+    elif setup_menu == "in-game":
+        selected = ""
     
     SCREEN_WIDTH = 30 * board_width
     SCREEN_HEIGHT = 30 * (board_height + 1)
@@ -97,6 +109,10 @@ def setup(setup_menu):
     for i in range (board_width * board_height) :
         grid.append(0)
         special_grid.append(0)
+    print(setup_menu)
+    if setup_menu == "in-game":
+        print(board_width)
+        exit()
 
     # Reset Variables
     kbinp = "" # last keyboard input
@@ -343,7 +359,7 @@ def rendergrid():
             if str(i*board_width+n) in already_merged:
                 print(todraw_size)
                 todraw = pygame.transform.smoothscale_by(todraw, todraw_size)
-            offset_board = (SCREEN_WIDTH != board_width*30) * (SCREEN_WIDTH - board_width*30)/244
+            offset_board = (SCREEN_WIDTH != board_width*30) * (SCREEN_WIDTH - board_width*30)/2
             offset_square = (pygame.Surface.get_width(todraw) - 30)/2
             screen.blit(todraw, (n*30+offset_board-offset_square,i*30-offset_square))
 
@@ -355,8 +371,16 @@ def rendergrid():
                 else:
                     todraw2.set_alpha(240)
                 screen.blit(todraw2, (n*30+offset_board,i*30))
+    
+    for i in range (board_width):
+        screen.blit(sprites["screenend"], (i*30+offset_board, SCREEN_HEIGHT-30))
 
-# Pre-Start
+def centertext(texture): # generate offset to center a texture
+    w = texture.get_width()
+    return (w/2)
+
+
+# Pre-Start 
 setup("main")
 
 # spawn("")
@@ -502,16 +526,14 @@ while run:
             
         button("restart", 0, SCREEN_HEIGHT-15)
         button("exit", SCREEN_WIDTH-pygame.Surface.get_width(sprites["exit0"]), SCREEN_HEIGHT-15)
-        for i in range (board_width):
-            screen.blit(sprites["screenend"], (i*30, SCREEN_HEIGHT-30))
 
-        screen.blit(sprites["SCORE"], (((board_width*30)-(len(f"SCORE: {score}")*8))/2, SCREEN_HEIGHT-30))
+        screen.blit(sprites["SCORE"], (((SCREEN_WIDTH)-(len(f"SCORE: {score}")*8))/2, SCREEN_HEIGHT-30))
 
         # screen.blit(sprites["SCORE"], (0, SCREEN_HEIGHT-30))
 
         score = str(score)
         for i in range (len(score)):
-            screen.blit(sprites[f"txt{score[i]}"], (((board_width*30)-(len(f"SCORE: {score}")*8))/2+(7+i)*8, SCREEN_HEIGHT-30))
+            screen.blit(sprites[f"txt{score[i]}"], (((SCREEN_WIDTH)-(len(f"SCORE: {score}")*8))/2+(7+i)*8, SCREEN_HEIGHT-30))
 
             # print((board_width*30)-(len(f"SCORE: {score}")*8)/2+(7+i)*8)
             # print((board_width*30)-(len(f"SCORE: {score}")*8)/2)
@@ -526,12 +548,40 @@ while run:
     elif menu == "main":
         screen.fill((0,0,0)) # refresh screen
         print(pygame.time.get_ticks())
-        screen.blit(sprites["logo"], (((board_width*30-46)/2),15+sin(pygame.time.get_ticks()/200)*3.5))
+        screen.blit(sprites["logo"], ((SCREEN_WIDTH/2-centertext(sprites["logo"])),17.5+sin(pygame.time.get_ticks()/200)*3.5))
+        screen.blit(sprites["ps"], ((SCREEN_WIDTH/2-centertext(sprites["ps"])),SCREEN_HEIGHT-30))
         key = pygame.key.get_just_pressed()
         if key[pygame.K_SPACE] == True:
             menu = "in-game"
             # SCREEN_WIDTH = randint(0,17*30)
             # screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+            # (len(str(board_width))+2)*4
+        if selected == "bw":
+            if key[pygame.K_DOWN] == True:
+                selected = "bh"
+            if key[pygame.K_LEFT] == True or key[pygame.K_RIGHT] == True:
+                board_width += (key[pygame.K_RIGHT]*1)-(key[pygame.K_LEFT]*1)
+                if board_width < 2:
+                    board_width = 2
+                elif board_width > 30:
+                    board_width = 30
+                else:
+                    channels[0].play(sounds["merge"])
+        
+        if selected == "bh":
+            if key[pygame.K_DOWN] == True:
+                selected = "bw"
+
+        offset = (len(str(board_width))+2)*8
+        screen.blit(sprites[f"bw{(selected=="bw")*1}"], ((SCREEN_WIDTH/2-centertext(sprites["bw0"])-offset),SCREEN_HEIGHT/2-30))
+        screen.blit(sprites["left"], ((SCREEN_WIDTH/2-centertext(sprites["left"])+offset+8*2),SCREEN_HEIGHT/2-30))
+        screen.blit(sprites["right"], ((SCREEN_WIDTH/2-centertext(sprites["right"])+offset+8*(5+len(str(board_width)))),SCREEN_HEIGHT/2-30))
+        for i in range (len(str(board_width))):
+            screen.blit(sprites[f"txt{str(board_width)[i]}"], ((SCREEN_WIDTH/2-centertext(sprites["txt1"])+offset+(4+i)*8),SCREEN_HEIGHT/2-30))
+        
+
+
+        
 
 
     for event in pygame.event.get():
