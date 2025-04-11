@@ -23,6 +23,9 @@ pygame.init()
 run = True
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((120,150))
+pygame.display.set_icon(pygame.image.load("src\images\sprites\-1.png"))
+
+
 
 # Load Sprites and Initialize Variables
 sprites = {

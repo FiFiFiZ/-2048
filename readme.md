@@ -1,5 +1,5 @@
-# -2048
-![Image](https://github.com/user-attachments/assets/13369008-068a-41e8-905f-2d83aa905a59)
+# <div align="center">-2048
+![Image](https://github.com/user-attachments/assets/13369008-068a-41e8-905f-2d83aa905a59) </div>
 
 
 -2048 is a 2048 game with new mechanics like **negative numbers**, **solid blocks**, **zipper blocks** and many more!
