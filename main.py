@@ -71,6 +71,7 @@ pygame.display.set_caption("-2048")
 pygame.mixer.music.load("src\music\SNES Classic Edition Menu Song.mp3") 
 pygame.mixer.music.play(-1)
 pygame.mixer.music.set_volume(0.05)
+pygame.mixer.music.set_volume(0)
 
 sounds = {
     "merge" : pygame.mixer.Sound("src\sfx\game_merge.wav"),
@@ -140,16 +141,39 @@ def setup(setup_menu):
     spawn("")
 
 def button (name, x ,y):
-    global menu, mousec, selected_time, board_width, keyjp
-    width = pygame.Surface.get_width(sprites[f"{name}0"])
-    height = pygame.Surface.get_height(sprites[f"{name}0"])
-    # Rect(x, y, pygame.Surface.get_width(sprites[f"{name}0"])), pygame.Surface.get_width(sprites[f"{name}0"])
+    global menu, mousec, selected_time, board_width, board_height, keyjp
+
     x_sprite, y_sprite = pygame.mouse.get_pos()
-    xh = x * 0.1 # makes x hitbox 20% bigger for buttons
-    yh = y * 0.1 # makes y hitbox 20% bigger for buttons
+    xh = x * 0.05 # makes x hitbox 20% bigger for buttons
+    yh = y * 0.05 # makes y hitbox 20% bigger for buttons
+    bidx = "" # button idx (which button arrows correspond to)
+
+    if "left" in name:
+        lr = "left"
+    elif "right" in name:
+        lr = "right"
+    else: 
+        lr = ""
+    
+    if lr == "":
+        width = pygame.Surface.get_width(sprites[f"{name}0"])
+        height = pygame.Surface.get_height(sprites[f"{name}0"])
+    else:
+        width = pygame.Surface.get_width(sprites[f"{lr}0"])
+        height = pygame.Surface.get_height(sprites[f"{lr}0"])
+        if lr == "left" or lr == "right":
+            if "0" in name:
+                val = board_width
+                bidx = "bw"
+            elif "1" in name:
+                val = board_height
+                bidx = "bh"
+    
+    # Rect(x, y, pygame.Surface.get_width(sprites[f"{name}0"])), pygame.Surface.get_width(sprites[f"{name}0"])
+
     if x_sprite in range (round(x-xh) ,round(x+width+xh)) and y_sprite in range (round(y-yh), round(y+height+yh)):
         hovered_over = 1
-        if not (name == "left" or name == "right"):
+        if not ("left" in name or "right" in name):
             global selected
             if selected != name:
                 selected_time = 0
@@ -167,25 +191,28 @@ def button (name, x ,y):
             if selected == name:
                 selected = 0
 
-    if not (name == "left" or name == "right"):
+    if not ("left" in name or "right" in name):
         if hovered_over > 0 and selected_time == 0:
             channels[1].play(sounds["hoverover"])
     else:
-        if selected == "bw":
+        if selected == "bw" or selected == "bh":
             if keyjp[pygame.K_DOWN] == True:
                 channels[0].play(sounds["merge"])
-                selected = "bh"
-            if name == "left" and keyjp[pygame.K_LEFT] == True:
-                board_width = change_bsize(board_width, -1, 3, 20)
-                if isinstance(board_width,str):
+                if selected == "bw":
+                    selected = "bh"
+
+            if lr == "left" and keyjp[pygame.K_LEFT] == True and bidx == selected: # left button with keyboard
+                val = change_bsize(val, -1, 3, 20)
+                if isinstance(val,str):
+                    val = int(val)
                     hovered_over = 3
-            elif name == "right" and keyjp[pygame.K_RIGHT] == True:
-                board_width = change_bsize(board_width, 1, 3, 20)
-                if isinstance(board_width,str):
+                    channels[0].play(sounds["merge"])
+            elif lr == "right" and keyjp[pygame.K_RIGHT] == True and bidx == selected: # right button with keyboard
+                val = change_bsize(val, 1, 3, 20)
+                if isinstance(val,str):
+                    val = int(val)
                     hovered_over = 4
-            if isinstance(board_width,str):
-                board_width = int(board_width)
-                channels[0].play(sounds["merge"])
+                    channels[0].play(sounds["merge"])
 
 
     if ((hovered_over == 1 and mousec == 1) or (hovered_over == 2 and keyjp[pygame.K_SPACE] == 1) or (hovered_over == 3 or hovered_over == 4)) == True: # receives signal to trigger the button
@@ -196,38 +223,46 @@ def button (name, x ,y):
             channels[0].play(sounds["select"])
             menu = "main"
             setup(menu)
-        elif name == "left" or name == "right": # trigger right/left increments (via keyboard)
-            if hovered_over == 3 and name == "left": # trigger left
-                if name == "left":
+        elif lr == "left" or lr == "right": # trigger right/left increments (via keyboard)
+            if hovered_over == 3 and lr == "left": # trigger left
+                if lr == "left":
                     hovered_over = 1
                     channels[0].play(sounds["merge"])
                 else:
                     hovered_over = 0
             elif hovered_over == 4: # trigger right
-                if name == "right":
+                if lr == "right":
                     hovered_over = 1
                     channels[0].play(sounds["merge"])
                 else:
                     hovered_over = 0
 
-            else: # trigger right/left increments (via mosueclick)
-                board_width = change_bsize(board_width, (name=="right"*1)-(name=="left"*1), 2, 30)
-                if isinstance(board_width,str):
+            else: # trigger right/left increments (via mouseclick)
+                val = change_bsize(val, (lr == "right" *1)-(lr == "left" *1), 2, 30)
+                if isinstance(val,str):
                     hovered_over = 1
-                    board_width = int(board_width)
+                    val = int(val)
                     channels[0].play(sounds["merge"])
+                    selected = bidx
                 else:
                     hovered_over = 0
-    elif name == "left" or name == "right":
+    elif lr == "left" or lr == "right":
         hovered_over = 0
 
+    if lr == "left" or lr == "right":
+        if "0" in name :
+            board_width = val
+        else:
+            board_height = val
+        name = lr
+    
     screen.blit(sprites[f"{name}{(hovered_over>0)*1}"], (x, y))
 
     # pygame.draw.rect(screen,(255,255,255), (x-xh, y-yh, width+xh, height+yh))
 
         #     button("restart", (x,y))
         # screen.blit(sprites["restart0"], (0, SCREEN_HEIGHT-15))
-        # screen.blit(sprites["exit0"], (SCREEN_WIDTH-pygame.Surface.get_width(sprites["exit0"]), SCREEN_HEIGHT-15))
+        # screen.blit(sprites["exit0"], (SCREEN_WIDTH-pyga  ²+me.Surface.get_width(sprites["exit0"]), SCREEN_HEIGHT-15))
 
 def checkloss(): 
     if not 0 in grid:
@@ -618,7 +653,9 @@ while run:
     elif menu == "main":
         screen.fill((0,0,0)) # refresh screen
         print(pygame.time.get_ticks())
-        screen.blit(sprites["logo"], ((SCREEN_WIDTH/2-centertext(sprites["logo"])),17.5+sin(pygame.time.get_ticks()/200)*3.5))
+        # pygame.Surface.set_colorkey(sprites["logo"], (255,255,255))
+        screen.blit(pygame.transform.scale_by(sprites["logo"], 1.5), ((SCREEN_WIDTH/2-centertext(sprites["logo"])*1.5),17.5+sin(pygame.time.get_ticks()/200)*3.5))
+        # screen.blit(pygame.transform.scale_by(sprites["logo"], 1), ((SCREEN_WIDTH/2-centertext(sprites["logo"])*1),17.5+sin(pygame.time.get_ticks()/200)*3.5))
         screen.blit(sprites["ps"], ((SCREEN_WIDTH/2-centertext(sprites["ps"])),SCREEN_HEIGHT-30))
         if keyjp[pygame.K_SPACE] == True:
             menu = "in-game"
@@ -636,14 +673,25 @@ while run:
                 selected = "bh"
                 channels[0].play(sounds["merge"])
 
-        offset = (len(str(board_width))+2)*8
+        offset = (len(str(board_width))+3.5)*4
+        offs = 18
+        print(offset)
 
-        screen.blit(sprites[f"bw{(selected=="bw")*1}"], ((SCREEN_WIDTH/2-centertext(sprites["bw0"])-offset),SCREEN_HEIGHT/2-30))
-        button("left", floor(SCREEN_WIDTH/2-centertext(sprites["left0"])+offset+8*2), floor(SCREEN_HEIGHT/2-30))
-        button("right", floor(SCREEN_WIDTH/2-centertext(sprites["right0"])+offset+8*(5+len(str(board_width)))), floor(SCREEN_HEIGHT/2-30))
+        screen.blit(sprites[f"bw{(selected=="bw")*1}"], ((SCREEN_WIDTH/2-centertext(sprites["bw0"])-offset),SCREEN_HEIGHT/2-25))
+        button("left_0", floor(SCREEN_WIDTH/2-centertext(sprites["left0"])-offset+4*(offs)), floor(SCREEN_HEIGHT/2-25))
+        button("right_0", floor(SCREEN_WIDTH/2-centertext(sprites["right0"])-offset+4*(offs+4+len(str(board_width))*2)), floor(SCREEN_HEIGHT/2-25))
         for i in range (len(str(board_width))):
-            screen.blit(sprites[f"txt{str(board_width)[i]}"], ((SCREEN_WIDTH/2-centertext(sprites["txt1"])+offset+(4+i)*8),SCREEN_HEIGHT/2-30))
-        
+            screen.blit(sprites[f"txt{str(board_width)[i]}"], ((SCREEN_WIDTH/2-centertext(sprites["txt1"])-offset+4*((offs+3)+i*2)) ,SCREEN_HEIGHT/2-25))
+
+        offset = (len(str(board_height))+3.5)*4
+        offs = 19
+        screen.blit(sprites[f"bh{(selected=="bh")*1}"], ((SCREEN_WIDTH/2-centertext(sprites["bh0"])-offset),SCREEN_HEIGHT/2-0))
+        button("left_1", floor(SCREEN_WIDTH/2-centertext(sprites["left0"])-offset+4*offs), floor(SCREEN_HEIGHT/2-0))
+        button("right_1", floor(SCREEN_WIDTH/2-centertext(sprites["right0"])-offset+4*((offs+4)+len(str(board_height))*2)), floor(SCREEN_HEIGHT/2-0))
+        for i in range (len(str(board_height))):
+            screen.blit(sprites[f"txt{str(board_height)[i]}"], ((SCREEN_WIDTH/2-centertext(sprites["txt1"])-offset+4*((offs+3)+i*2)) ,SCREEN_HEIGHT/2-0))
+
+        button("mutev", floor(SCREEN_WIDTH/2-centertext(sprites["left0"])), floor(SCREEN_HEIGHT/2+25))
 
 
         
