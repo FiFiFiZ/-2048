@@ -92,6 +92,7 @@ for i in range (3):
     channels[i].set_volume(0.1)
 
 mousec = 0
+mousem = 0
 non_collidables = [0, "minus"] # blocks that can't be collided with
 selected = "" # selected button on ui
 selected_time = 0
@@ -145,6 +146,33 @@ def setup(setup_menu):
     spawn("")
     spawn("")
 
+def ui(type):
+    if type == "main":
+        ui("bw")
+        ui("bh")
+    elif type == "bw" or "bh":
+        if type == "bw":
+            val = board_width
+        else:
+            val = board_height
+        x_offs = 18+(type == "bh")
+        y_offs = 25*(type == "bw")
+        offset = (len(str(val))+3.5)*4
+        # print(f'selected: {selected}    //  selected_time: {selected_time}')
+        # screen.blit(sprites[f"bw{(selected=="bw")*1}"], ((SCREEN_WIDTH/2-centertext(sprites["bw0"])-offset),SCREEN_HEIGHT/2-25))
+        button(type, SCREEN_WIDTH/2-centertext(sprites[f"{type}0"])-offset, SCREEN_HEIGHT/2-y_offs)
+        button(f"left_{0+(type=="bh")}", floor(SCREEN_WIDTH/2-centertext(sprites["left0"])-offset+4*(x_offs)), floor(SCREEN_HEIGHT/2-y_offs))
+        button(f"right_{0+(type=="bh")}", floor(SCREEN_WIDTH/2-centertext(sprites["right0"])-offset+4*(x_offs+4+len(str(val))*2)), floor(SCREEN_HEIGHT/2-y_offs))
+        for i in range (len(str(val))):
+            replace_gray = pygame.PixelArray(sprites[f"txt{str(val)[i]}"])
+            if selected == type:
+                replace_gray.replace((110,110,110), (255, 255, 255))
+            else:
+                replace_gray.replace((255,255,255), (110, 110 ,110)) # make non-selected buttons gray
+            del replace_gray
+            screen.blit(sprites[f"txt{str(val)[i]}"], ((SCREEN_WIDTH/2-centertext(sprites["txt1"])-offset+4*((x_offs+3)+i*2)) ,SCREEN_HEIGHT/2-y_offs))
+    
+
 def button (name, x ,y):
     global menu, mousec, selected_time, board_width, board_height, keyjp, mutev
 
@@ -181,7 +209,8 @@ def button (name, x ,y):
     
     # Rect(x, y, pygame.Surface.get_width(sprites[f"{name}0"])), pygame.Surface.get_width(sprites[f"{name}0"])
 
-    if x_sprite in range (round(x-xh) ,round(x+width+xh)) and y_sprite in range (round(y-yh), round(y+height+yh)):
+    if mousem > 0 and x_sprite in range (round(x-xh) ,round(x+width+xh)) and y_sprite in range (round(y-yh), round(y+height+yh)):
+        print(name)
         hovered_over = 1
         if not ("left" in name or "right" in name):
             global selected
@@ -199,20 +228,24 @@ def button (name, x ,y):
         else:
             hovered_over = 0
             if selected == name:
-                selected = 0
+                hovered_over = 1
+                # selected = 0
     
     if not ("left" in name or "right" in name):
         if hovered_over > 0 and selected_time == 0:
             channels[1].play(sounds["hoverover"])
+        if name == "mutev":
+            if keyjp[pygame.K_LEFT] == True or keyjp[pygame.K_RIGHT] == True or keyjp[pygame.K_SPACE] == True:
+                mutev = 1 - mutev
     else:
         if lr == "left" and keyjp[pygame.K_LEFT] == True and bidx == selected: # left button with keyboard
-            val = change_bsize(val, -1, 3, 20)
+            val = change_bsize(val, -1, 2, 20)
             if isinstance(val,str):
                 val = int(val)
                 hovered_over = 3
                 channels[0].play(sounds["merge"])
         elif lr == "right" and keyjp[pygame.K_RIGHT] == True and bidx == selected: # right button with keyboard
-            val = change_bsize(val, 1, 3, 20)
+            val = change_bsize(val, 1, 2, 20)
             if isinstance(val,str):
                 val = int(val)
                 hovered_over = 4
@@ -242,7 +275,7 @@ def button (name, x ,y):
                     hovered_over = 0
 
             else: # trigger right/left increments (via mouseclick)
-                val = change_bsize(val, (lr == "right" *1)-(lr == "left" *1), 2, 30)
+                val = change_bsize(val, (lr == "right" *1)-(lr == "left" *1), 2, 20)
                 if isinstance(val,str):
                     hovered_over = 1
                     val = int(val)
@@ -267,6 +300,8 @@ def button (name, x ,y):
         hovered_over = 0
 
     if lr == "left" or lr == "right":
+        if selected == bidx:
+            bidx = "ok"
         if "0" in name :
             board_width = val
         else:
@@ -275,6 +310,16 @@ def button (name, x ,y):
     elif name == "mutev":
         name = f"MUTE VOLUME{mutev}"
     
+    replace_gray = pygame.PixelArray(sprites[f"{imgname}0"])
+    if bidx == "ok":
+        replace_gray.replace((110,110,110), (255, 255, 255))
+    elif hovered_over == 0:
+        replace_gray.replace((255,255,255), (110, 110 ,110)) # make non-selected buttons gray
+    else: 
+        replace_gray.replace((110,110,110), (255, 255, 255))
+    del replace_gray
+
+
     screen.blit(sprites[f"{name}{(hovered_over>0)*1}"], (x, y))
 
     # pygame.draw.rect(screen,(255,255,255), (x-xh, y-yh, width+xh, height+yh))
@@ -516,6 +561,9 @@ while run:
     clock.tick(30)
     screen.fill((0,0,0))
 
+    mouse, mousem = pygame.mouse.get_rel()
+    mousem = mouse**2+mousem**2 # mouse movement vector
+
     mouse = pygame.mouse.get_pressed()
     if mouse[0] == True:
         mousec += 1
@@ -613,7 +661,6 @@ while run:
 
 
             new_block_fade -= 45
-            selected_time += 1
             todraw_size += (1-todraw_size)/3
 
             # if keyjp[pygame.K_SPACE] == True:
@@ -699,30 +746,46 @@ while run:
                 channels[0].play(sounds["merge"])
 
 
+        ui("main")
+
+        # offset = (len(str(board_width))+3.5)*4
+        # offs = 18
+        # print(f'selected: {selected}    //  selected_time: {selected_time}')
+
+        # # screen.blit(sprites[f"bw{(selected=="bw")*1}"], ((SCREEN_WIDTH/2-centertext(sprites["bw0"])-offset),SCREEN_HEIGHT/2-25))
+        # button("bw", SCREEN_WIDTH/2-centertext(sprites["bw0"])-offset, SCREEN_HEIGHT/2-25)
+        # button("left_0", floor(SCREEN_WIDTH/2-centertext(sprites["left0"])-offset+4*(offs)), floor(SCREEN_HEIGHT/2-25))
+        # button("right_0", floor(SCREEN_WIDTH/2-centertext(sprites["right0"])-offset+4*(offs+4+len(str(board_width))*2)), floor(SCREEN_HEIGHT/2-25))
+        # for i in range (len(str(board_width))):
+        #     replace_gray = pygame.PixelArray(sprites[f"txt{str(board_width)[i]}"])
+        #     if selected == "bw":
+        #         replace_gray.replace((110,110,110), (255, 255, 255))
+        #     else:
+        #         replace_gray.replace((255,255,255), (110, 110 ,110)) # make non-selected buttons gray
+        #     del replace_gray
+        #     screen.blit(sprites[f"txt{str(board_width)[i]}"], ((SCREEN_WIDTH/2-centertext(sprites["txt1"])-offset+4*((offs+3)+i*2)) ,SCREEN_HEIGHT/2-25))
 
 
-        offset = (len(str(board_width))+3.5)*4
-        offs = 18
-        print(f'selected: {selected}    //  selected_time: {selected_time}')
-
-        screen.blit(sprites[f"bw{(selected=="bw")*1}"], ((SCREEN_WIDTH/2-centertext(sprites["bw0"])-offset),SCREEN_HEIGHT/2-25))
-        button("left_0", floor(SCREEN_WIDTH/2-centertext(sprites["left0"])-offset+4*(offs)), floor(SCREEN_HEIGHT/2-25))
-        button("right_0", floor(SCREEN_WIDTH/2-centertext(sprites["right0"])-offset+4*(offs+4+len(str(board_width))*2)), floor(SCREEN_HEIGHT/2-25))
-        for i in range (len(str(board_width))):
-            screen.blit(sprites[f"txt{str(board_width)[i]}"], ((SCREEN_WIDTH/2-centertext(sprites["txt1"])-offset+4*((offs+3)+i*2)) ,SCREEN_HEIGHT/2-25))
-
-        offset = (len(str(board_height))+3.5)*4
-        offs = 19
-        screen.blit(sprites[f"bh{(selected=="bh")*1}"], ((SCREEN_WIDTH/2-centertext(sprites["bh0"])-offset),SCREEN_HEIGHT/2-0))
-        button("left_1", floor(SCREEN_WIDTH/2-centertext(sprites["left0"])-offset+4*offs), floor(SCREEN_HEIGHT/2-0))
-        button("right_1", floor(SCREEN_WIDTH/2-centertext(sprites["right0"])-offset+4*((offs+4)+len(str(board_height))*2)), floor(SCREEN_HEIGHT/2-0))
-        for i in range (len(str(board_height))):
-            screen.blit(sprites[f"txt{str(board_height)[i]}"], ((SCREEN_WIDTH/2-centertext(sprites["txt1"])-offset+4*((offs+3)+i*2)) ,SCREEN_HEIGHT/2-0))
+        # offset = (len(str(board_height))+3.5)*4
+        # offs = 19
+        # button("bh", SCREEN_WIDTH/2-centertext(sprites["bh0"])-offset, SCREEN_HEIGHT/2)
+        # # screen.blit(sprites[f"bh{(selected=="bh")*1}"], ((SCREEN_WIDTH/2-centertext(sprites["bh0"])-offset),SCREEN_HEIGHT/2-0))
+        # button("left_1", floor(SCREEN_WIDTH/2-centertext(sprites["left0"])-offset+4*offs), floor(SCREEN_HEIGHT/2-0))
+        # button("right_1", floor(SCREEN_WIDTH/2-centertext(sprites["right0"])-offset+4*((offs+4)+len(str(board_height))*2)), floor(SCREEN_HEIGHT/2-0))
+        # for i in range (len(str(board_height))):
+        #     replace_gray = pygame.PixelArray(sprites[f"txt{str(board_height)[i]}"])
+        #     if selected == "bh":
+        #         replace_gray.replace((110,110,110), (255, 255, 255))
+        #     else:
+        #         replace_gray.replace((255,255,255), (110, 110 ,110)) # make non-selected buttons gray
+        #     del replace_gray
+        #     screen.blit(sprites[f"txt{str(board_height)[i]}"], ((SCREEN_WIDTH/2-centertext(sprites["txt1"])-offset+4*((offs+3)+i*2)) ,SCREEN_HEIGHT/2-0))
 
         button("mutev", floor(SCREEN_WIDTH/2-centertext(sprites[f"MUTE VOLUME10"])), floor(SCREEN_HEIGHT/2+25))
 
 
-        
+    selected_time += 1
+
 
 
     for event in pygame.event.get():
