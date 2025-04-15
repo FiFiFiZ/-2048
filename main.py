@@ -99,10 +99,11 @@ selected_time = 0
 board_width = 4
 board_height = 4
 
+
 # Define Methods
 
 def setup(setup_menu):
-    global board_width, board_height, SCREEN_HEIGHT, SCREEN_WIDTH, screen, grid, possible_integers, kbinp, new_block_pos, new_block_fade, level, game_lost, selected, mousec, score, special_grid, already_merged, todraw_size # i found out too late that this was bad practice, i will take note of that in the future :P
+    global board_width, board_height, SCREEN_HEIGHT, SCREEN_WIDTH, screen, grid, possible_integers, kbinp, new_block_pos, new_block_fade, level, game_lost, selected, mousec, score, special_grid, already_merged, todraw_size, layout # i found out too late that this was bad practice, i will take note of that in the future :P
     if setup_menu == "main":
         selected = "bw"
     elif setup_menu == "in-game":
@@ -142,14 +143,44 @@ def setup(setup_menu):
     score = 0   
     already_merged = []
     todraw_size = 1
+    layout = "mouse"
 
     spawn("")
     spawn("")
 
 def ui(type):
+    global layout, selected
     if type == "main":
+        screen.blit(pygame.transform.scale_by(sprites["logo"], 1.5), ((SCREEN_WIDTH/2-centertext(sprites["logo"])*1.5),17.5+sin(pygame.time.get_ticks()/200)*3.5))
+        button("ps", SCREEN_WIDTH/2-centertext(sprites["ps"]), SCREEN_HEIGHT-30)
+        if keyjp[pygame.K_UP] == True:
+            if selected == "bh":
+                selected = "bw"
+                channels[0].play(sounds["merge"])
+            elif selected == "mutev":
+                selected = "bh"
+                channels[0].play(sounds["merge"])
+            elif selected == "ps":
+                selected = "mutev"
+                channels[0].play(sounds["merge"])
+        if keyjp[pygame.K_DOWN] == True:
+            if selected == "bw":
+                selected = "bh"
+                channels[0].play(sounds["merge"])
+            elif selected == "bh":
+                selected = "mutev"
+                channels[0].play(sounds["merge"])
+            elif selected == "mutev":
+                selected = "ps"
+                channels[0].play(sounds["merge"])
+        if mousem == 0 and (keyjp[pygame.K_UP] == True or keyjp[pygame.K_DOWN] == True):
+            layout = "kb"
+        elif mousem > 0:
+            layout = "mouse"
         ui("bw")
         ui("bh")
+        button("mutev", floor(SCREEN_WIDTH/2-centertext(sprites[f"MUTE VOLUME10"])), floor(SCREEN_HEIGHT/2+25))
+
     elif type == "bw" or "bh":
         if type == "bw":
             val = board_width
@@ -174,7 +205,7 @@ def ui(type):
     
 
 def button (name, x ,y):
-    global menu, mousec, selected_time, board_width, board_height, keyjp, mutev
+    global menu, mousec, selected_time, board_width, board_height, keyjp, mutev, layout
 
     x_sprite, y_sprite = pygame.mouse.get_pos()
     xh = x * 0.0 # makes x hitbox 20% bigger for buttons
@@ -203,20 +234,29 @@ def button (name, x ,y):
             elif "1" in name:
                 val = board_height
                 bidx = "bh"
-    width = pygame.Surface.get_width(sprites[f"{imgname}0"])
-    height = pygame.Surface.get_height(sprites[f"{imgname}0"])
+    if name == "ps":
+        width = pygame.Surface.get_width(sprites[f"{imgname}"])
+        height = pygame.Surface.get_height(sprites[f"{imgname}"])
+
+    else:
+        width = pygame.Surface.get_width(sprites[f"{imgname}0"])
+        height = pygame.Surface.get_height(sprites[f"{imgname}0"])
 
     
     # Rect(x, y, pygame.Surface.get_width(sprites[f"{name}0"])), pygame.Surface.get_width(sprites[f"{name}0"])
 
-    if mousem > 0 and x_sprite in range (round(x-xh) ,round(x+width+xh)) and y_sprite in range (round(y-yh), round(y+height+yh)):
-        print(name)
-        hovered_over = 1
+    if x_sprite in range (round(x-xh) ,round(x+width+xh)) and y_sprite in range (round(y-yh), round(y+height+yh)):
+        hovered_over = 1.5
         if not ("left" in name or "right" in name):
-            global selected
-            if selected != name:
-                selected_time = 0
-            selected = name
+            if layout == "mouse":
+                global selected
+                if selected != name:
+                    selected_time = 0
+                selected = name
+            else:
+                if selected != name:
+                    hovered_over = 0
+
 
     else:
         global game_lost
@@ -231,12 +271,31 @@ def button (name, x ,y):
                 hovered_over = 1
                 # selected = 0
     
+    if name == "left_0":
+        print(hovered_over)
+
     if not ("left" in name or "right" in name):
         if hovered_over > 0 and selected_time == 0:
             channels[1].play(sounds["hoverover"])
-        if name == "mutev":
-            if keyjp[pygame.K_LEFT] == True or keyjp[pygame.K_RIGHT] == True or keyjp[pygame.K_SPACE] == True:
-                mutev = 1 - mutev
+        if selected == "name":
+            if name == "mutev": # mute volume (with keyboard)
+                if keyjp[pygame.K_LEFT] == True or keyjp[pygame.K_RIGHT] == True or keyjp[pygame.K_SPACE] == True:
+                    mutev = 1 - mutev
+                    if mutev == 1:
+                        pygame.mixer.music.set_volume(0)
+                        for i in channels:
+                            channels[i].set_volume(0)
+                    else:
+                        pygame.mixer.music.set_volume(0.05)
+                        for i in channels:
+                            channels[i].set_volume(0.1)
+                    channels[0].play(sounds["merge"])
+            elif name == "ps":
+                if keyjp[pygame.K_SPACE] == True:
+                    channels[0].play(sounds["merge"])
+                    menu = "in-game"
+                    setup(menu)
+
     else:
         if lr == "left" and keyjp[pygame.K_LEFT] == True and bidx == selected: # left button with keyboard
             val = change_bsize(val, -1, 2, 20)
@@ -252,16 +311,17 @@ def button (name, x ,y):
                 channels[0].play(sounds["merge"])
 
 
-    if ((hovered_over == 1 and mousec == 1) or (hovered_over == 2 and keyjp[pygame.K_SPACE] == 1) or (hovered_over == 3 or hovered_over == 4)) == True: # receives signal to trigger the button
+    if ((hovered_over == 1.5 and mousec == 1) or ((hovered_over == 1 or hovered_over == 2) and keyjp[pygame.K_SPACE] == 1) or (hovered_over == 3 or hovered_over == 4)) == True: # receives signal to trigger the button
+        hovered_over = floor(hovered_over)
         if name == "restart": # trigger restart button
             channels[0].play(sounds["select"])
             setup(menu)
         elif name == "exit": # trigger exit button
             channels[0].play(sounds["select"])
-            menu = "main"
+            menu = "main"  
             setup(menu)
         elif lr == "left" or lr == "right": # trigger right/left increments (via keyboard)
-            if hovered_over == 3 and lr == "left": # trigger left
+            if hovered_over == 3: # trigger left
                 if lr == "left":
                     hovered_over = 1
                     channels[0].play(sounds["merge"])
@@ -279,6 +339,7 @@ def button (name, x ,y):
                 if isinstance(val,str):
                     hovered_over = 1
                     val = int(val)
+                    print(f"LOOK NEW VAL: {val}")
                     channels[0].play(sounds["merge"])
                     selected = bidx
                 else:
@@ -294,6 +355,11 @@ def button (name, x ,y):
                 pygame.mixer.music.set_volume(0.05)
                 for i in channels:
                     channels[i].set_volume(0.1)
+        elif name == "ps":
+            channels[0].play(sounds["merge"])
+            menu = "in-game"
+            setup(menu)
+
 
 
     elif lr == "left" or lr == "right":
@@ -310,7 +376,10 @@ def button (name, x ,y):
     elif name == "mutev":
         name = f"MUTE VOLUME{mutev}"
     
-    replace_gray = pygame.PixelArray(sprites[f"{imgname}0"])
+    if imgname == "ps":
+        replace_gray = pygame.PixelArray(sprites[f"{imgname}"])
+    else:
+        replace_gray = pygame.PixelArray(sprites[f"{imgname}0"])
     if bidx == "ok":
         replace_gray.replace((110,110,110), (255, 255, 255))
     elif hovered_over == 0:
@@ -319,8 +388,10 @@ def button (name, x ,y):
         replace_gray.replace((110,110,110), (255, 255, 255))
     del replace_gray
 
-
-    screen.blit(sprites[f"{name}{(hovered_over>0)*1}"], (x, y))
+    if name == "ps":
+        screen.blit(sprites[name], (x, y))
+    else:
+        screen.blit(sprites[f"{name}{(hovered_over>0)*1}"], (x, y))
 
     # pygame.draw.rect(screen,(255,255,255), (x-xh, y-yh, width+xh, height+yh))
 
@@ -569,6 +640,7 @@ while run:
         mousec += 1
     else:
         mousec = 0
+    # print(mousec)
 
     keyjp = pygame.key.get_just_pressed()
 
@@ -718,72 +790,8 @@ while run:
 
     elif menu == "main":
         screen.fill((0,0,0)) # refresh screen
-        print(pygame.time.get_ticks())
-        # pygame.Surface.set_colorkey(sprites["logo"], (255,255,255))
-        screen.blit(pygame.transform.scale_by(sprites["logo"], 1.5), ((SCREEN_WIDTH/2-centertext(sprites["logo"])*1.5),17.5+sin(pygame.time.get_ticks()/200)*3.5))
-        # screen.blit(pygame.transform.scale_by(sprites["logo"], 1), ((SCREEN_WIDTH/2-centertext(sprites["logo"])*1),17.5+sin(pygame.time.get_ticks()/200)*3.5))
-        screen.blit(sprites["ps"], ((SCREEN_WIDTH/2-centertext(sprites["ps"])),SCREEN_HEIGHT-30))
-        if keyjp[pygame.K_SPACE] == True:
-            menu = "in-game"
-            setup(menu)
-            # SCREEN_WIDTH = randint(0,17*30)
-            # screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-            # (len(str(board_width))+2)*4
-        
-        if keyjp[pygame.K_UP] == True:
-            if selected == "bh":
-                selected = "bw"
-                channels[0].play(sounds["merge"])
-            elif selected == "mutev":
-                selected = "bh"
-                channels[0].play(sounds["merge"])
-        if keyjp[pygame.K_DOWN] == True:
-            if selected == "bw":
-                selected = "bh"
-                channels[0].play(sounds["merge"])
-            elif selected == "bh":
-                selected = "mutev"
-                channels[0].play(sounds["merge"])
-
-
         ui("main")
-
-        # offset = (len(str(board_width))+3.5)*4
-        # offs = 18
-        # print(f'selected: {selected}    //  selected_time: {selected_time}')
-
-        # # screen.blit(sprites[f"bw{(selected=="bw")*1}"], ((SCREEN_WIDTH/2-centertext(sprites["bw0"])-offset),SCREEN_HEIGHT/2-25))
-        # button("bw", SCREEN_WIDTH/2-centertext(sprites["bw0"])-offset, SCREEN_HEIGHT/2-25)
-        # button("left_0", floor(SCREEN_WIDTH/2-centertext(sprites["left0"])-offset+4*(offs)), floor(SCREEN_HEIGHT/2-25))
-        # button("right_0", floor(SCREEN_WIDTH/2-centertext(sprites["right0"])-offset+4*(offs+4+len(str(board_width))*2)), floor(SCREEN_HEIGHT/2-25))
-        # for i in range (len(str(board_width))):
-        #     replace_gray = pygame.PixelArray(sprites[f"txt{str(board_width)[i]}"])
-        #     if selected == "bw":
-        #         replace_gray.replace((110,110,110), (255, 255, 255))
-        #     else:
-        #         replace_gray.replace((255,255,255), (110, 110 ,110)) # make non-selected buttons gray
-        #     del replace_gray
-        #     screen.blit(sprites[f"txt{str(board_width)[i]}"], ((SCREEN_WIDTH/2-centertext(sprites["txt1"])-offset+4*((offs+3)+i*2)) ,SCREEN_HEIGHT/2-25))
-
-
-        # offset = (len(str(board_height))+3.5)*4
-        # offs = 19
-        # button("bh", SCREEN_WIDTH/2-centertext(sprites["bh0"])-offset, SCREEN_HEIGHT/2)
-        # # screen.blit(sprites[f"bh{(selected=="bh")*1}"], ((SCREEN_WIDTH/2-centertext(sprites["bh0"])-offset),SCREEN_HEIGHT/2-0))
-        # button("left_1", floor(SCREEN_WIDTH/2-centertext(sprites["left0"])-offset+4*offs), floor(SCREEN_HEIGHT/2-0))
-        # button("right_1", floor(SCREEN_WIDTH/2-centertext(sprites["right0"])-offset+4*((offs+4)+len(str(board_height))*2)), floor(SCREEN_HEIGHT/2-0))
-        # for i in range (len(str(board_height))):
-        #     replace_gray = pygame.PixelArray(sprites[f"txt{str(board_height)[i]}"])
-        #     if selected == "bh":
-        #         replace_gray.replace((110,110,110), (255, 255, 255))
-        #     else:
-        #         replace_gray.replace((255,255,255), (110, 110 ,110)) # make non-selected buttons gray
-        #     del replace_gray
-        #     screen.blit(sprites[f"txt{str(board_height)[i]}"], ((SCREEN_WIDTH/2-centertext(sprites["txt1"])-offset+4*((offs+3)+i*2)) ,SCREEN_HEIGHT/2-0))
-
-        button("mutev", floor(SCREEN_WIDTH/2-centertext(sprites[f"MUTE VOLUME10"])), floor(SCREEN_HEIGHT/2+25))
-
-
+        
     selected_time += 1
 
 
