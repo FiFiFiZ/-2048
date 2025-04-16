@@ -40,7 +40,7 @@ sprites = {
     "screenend" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\screenend.png")),
     "SCORE" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\SCORE.png")),
     "minus" : pygame.Surface.convert(pygame.image.load("src\images\sprites\minus.png")),
-    "ps" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\PRESS SPACE.png")),
+    "ps" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\PLAY0.png")),
     "bh0" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\BOARD HEIGHT0.png")),
     "bh1" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\BOARD HEIGHT1.png")),
     "bw0" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\BOARD WIDTH0.png")),
@@ -53,8 +53,9 @@ sprites = {
     "MUTE VOLUME01" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\MUTE VOLUME01.png")),
     "MUTE VOLUME10" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\MUTE VOLUME10.png")),
     "MUTE VOLUME11" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\MUTE VOLUME11.png")),
-    
-
+    "particle0" : pygame.Surface.convert(pygame.image.load(r"src\images\sprites\particle0.png")),
+    "particle1" : pygame.Surface.convert(pygame.image.load(r"src\images\sprites\particle1.png")),
+    "particle2" : pygame.Surface.convert(pygame.image.load(r"src\images\sprites\particle2.png"))
 
 }
 
@@ -98,9 +99,27 @@ selected = "" # selected button on ui
 selected_time = 0
 board_width = 4
 board_height = 4
-
+particle_list = []
 
 # Define Methods
+class particles():
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.xs = randint(-5,5)
+        self.ys = randint(-2,3)
+        self.img = sprites["particle" + str(randint(0,2))]
+        self.transparency = 0
+    def particle(p):
+        p.xs = p.xs * 0.97
+        p.ys -= 0.6
+        p.x += p.xs
+        p.y += p.ys
+        p.transparency += 18
+        if p.transparency > 255:
+            return "kill"
+        p.img.set_alpha(p.transparency)
+        screen.blit(p.img, (p.x, p.y))
 
 def setup(setup_menu):
     global board_width, board_height, SCREEN_HEIGHT, SCREEN_WIDTH, screen, grid, possible_integers, kbinp, new_block_pos, new_block_fade, level, game_lost, selected, mousec, score, special_grid, already_merged, todraw_size, layout # i found out too late that this was bad practice, i will take note of that in the future :P
@@ -110,8 +129,8 @@ def setup(setup_menu):
         selected = ""
     
     if setup_menu == "main":
-        SCREEN_WIDTH = 30 * 6
-        SCREEN_HEIGHT = 30 * 6
+        SCREEN_WIDTH = 30 * 8
+        SCREEN_HEIGHT = 30 * 8
     else:
         SCREEN_WIDTH = 30 * board_width
         SCREEN_HEIGHT = 30 * (board_height + 1)
@@ -202,6 +221,9 @@ def ui(type):
                 replace_gray.replace((255,255,255), (110, 110 ,110)) # make non-selected buttons gray
             del replace_gray
             screen.blit(sprites[f"txt{str(val)[i]}"], ((SCREEN_WIDTH/2-centertext(sprites["txt1"])-offset+4*((x_offs+3)+i*2)) ,SCREEN_HEIGHT/2-y_offs))
+            replace_gray = pygame.PixelArray(sprites[f"txt{str(val)[i]}"])
+            replace_gray.replace((110,110,110), (255, 255, 255))
+            del replace_gray
     
 
 def button (name, x ,y):
@@ -392,6 +414,7 @@ def button (name, x ,y):
         screen.blit(sprites[name], (x, y))
     else:
         screen.blit(sprites[f"{name}{(hovered_over>0)*1}"], (x, y))
+
 
     # pygame.draw.rect(screen,(255,255,255), (x-xh, y-yh, width+xh, height+yh))
 
@@ -648,6 +671,17 @@ while run:
     if menu == "in-game":
 
         rendergrid()
+        for i in range (len(particle_list)):
+            execute = particle_list[i].particle()
+            if execute == "kill":
+                particle_list[i] = ""
+        j = 0
+        for i in range (len(particle_list)):
+            if particle_list[j] == "":
+                del particle_list[j]
+                j -= 1
+            j += 1
+
 
         if game_lost == 0:
             
@@ -705,6 +739,9 @@ while run:
                                     grid_changed = 2 # there's been a merge 
                                     score += grid[int(newpos)]
                                     channels[2].play(sounds["merge"])
+                                    for j in range (0, randint(2,4)):
+                                        particle_list.append(len(particle_list))
+                                        particle_list[len(particle_list)-1] = particles(float(newpos) % board_width, floor(float(newpos)/board_width)) # create particle
                                 else:
                                     grid[newpos] = grid[currentpos]
                                 grid[currentpos] = 0
