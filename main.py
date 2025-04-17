@@ -53,9 +53,9 @@ sprites = {
     "MUTE VOLUME01" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\MUTE VOLUME01.png")),
     "MUTE VOLUME10" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\MUTE VOLUME10.png")),
     "MUTE VOLUME11" : pygame.Surface.convert(pygame.image.load(r"src\images\ui\MUTE VOLUME11.png")),
-    "particle0" : pygame.Surface.convert(pygame.image.load(r"src\images\sprites\particle0.png")),
-    "particle1" : pygame.Surface.convert(pygame.image.load(r"src\images\sprites\particle1.png")),
-    "particle2" : pygame.Surface.convert(pygame.image.load(r"src\images\sprites\particle2.png"))
+    "particle0" : pygame.image.load(r"src\images\sprites\particle0.png"),
+    "particle1" : pygame.image.load(r"src\images\sprites\particle1.png"),
+    "particle2" : pygame.image.load(r"src\images\sprites\particle2.png")
 
 }
 
@@ -107,18 +107,18 @@ class particles():
         self.x = x
         self.y = y
         self.xs = randint(-5,5)
-        self.ys = randint(-2,3)
+        self.ys = randint(-3,2)
         self.img = sprites["particle" + str(randint(0,2))]
         self.transparency = 0
     def particle(p):
         p.xs = p.xs * 0.97
-        p.ys -= 0.6
+        p.ys += 0.4
         p.x += p.xs
         p.y += p.ys
-        p.transparency += 18
+        p.transparency += 10
         if p.transparency > 255:
             return "kill"
-        p.img.set_alpha(p.transparency)
+        p.img.set_alpha(255-p.transparency)
         screen.blit(p.img, (p.x, p.y))
 
 def setup(setup_menu):
@@ -200,7 +200,7 @@ def ui(type):
         ui("bh")
         button("mutev", floor(SCREEN_WIDTH/2-centertext(sprites[f"MUTE VOLUME10"])), floor(SCREEN_HEIGHT/2+25))
 
-    elif type == "bw" or "bh":
+    elif type == "bw" or type == "bh":
         if type == "bw":
             val = board_width
         else:
@@ -224,6 +224,17 @@ def ui(type):
             replace_gray = pygame.PixelArray(sprites[f"txt{str(val)[i]}"])
             replace_gray.replace((110,110,110), (255, 255, 255))
             del replace_gray
+        
+    elif type == "game_over":
+        screen.blit(sprites["gameover"], ((SCREEN_WIDTH-pygame.Surface.get_width(sprites["gameover"]))/2, (SCREEN_HEIGHT-pygame.Surface.get_height(sprites["gameover"]))/2))
+        if keyjp[pygame.K_LEFT] == True:
+            if selected != "restart":
+                channels[1].play(sounds["hoverover"])
+            selected = "restart"
+        if keyjp[pygame.K_RIGHT] == True:
+            if selected != "exit":
+                channels[1].play(sounds["hoverover"])
+            selected = "exit"
     
 
 def button (name, x ,y):
@@ -607,24 +618,35 @@ def rendergrid():
     for i in range (0, board_height): # Draw every square
         for n in range (0, board_width) : 
             # print(f"square prinited: {i*board_width+n}")
-            print(f"{len(grid)}  //  board_width: {board_width*board_height}")
-            if grid[i*board_width+n] == 0:
+            # print(f"{len(grid)}  //  board_width: {board_width*board_height}")
+            pos = i*board_width+n
+            if grid[pos] == 0:
                 sprite_n = 0
             else:
                 # sprite_n = possible_integers.index(grid[i*board_width+n]) + 1
-                sprite_n = grid[i*board_width+n]
+                sprite_n = grid[pos]
             # print(sprite_n)
             todraw = sprites[str(sprite_n)]
             if game_lost == 0:
-                todraw.set_alpha(255 - ((i*board_width+n in new_block_pos) * new_block_fade))
+                todraw.set_alpha(255 - ((pos in new_block_pos) * new_block_fade))
             else:
                 todraw.set_alpha(122)
-            if str(i*board_width+n) in already_merged:
+            if str(pos) in already_merged:
                 print(todraw_size)
                 todraw = pygame.transform.smoothscale_by(todraw, todraw_size)
             offset_board = (SCREEN_WIDTH != board_width*30) * (SCREEN_WIDTH - board_width*30)/2
             offset_square = (pygame.Surface.get_width(todraw) - 30)/2
-            screen.blit(todraw, (n*30+offset_board-offset_square,i*30-offset_square))
+            x = n*30+offset_board-offset_square
+            y = i*30-offset_square
+            screen.blit(todraw, (x,y))
+            if int(pos) in particle_list:
+                particles_at_this_pos = [z for z, k in enumerate(particle_list) if k == pos]
+                for k in range (len(particles_at_this_pos)):
+                    # idx = particle_list.index(particles_at_this_pos[i])
+                    # print(f"idx: {idx}")
+                    particle_list[particles_at_this_pos[k]] = particles(x, y) # create particle
+                    print(particle_list)
+                
 
             todraw2 = special_grid[i*board_width+n]
             if todraw2 != 0:
@@ -671,6 +693,7 @@ while run:
     if menu == "in-game":
 
         rendergrid()
+        print(f"PARTICLELIST: {particle_list}")
         for i in range (len(particle_list)):
             execute = particle_list[i].particle()
             if execute == "kill":
@@ -740,8 +763,9 @@ while run:
                                     score += grid[int(newpos)]
                                     channels[2].play(sounds["merge"])
                                     for j in range (0, randint(2,4)):
-                                        particle_list.append(len(particle_list))
-                                        particle_list[len(particle_list)-1] = particles(float(newpos) % board_width, floor(float(newpos)/board_width)) # create particle
+                                        particle_list.append(int(newpos))
+                                        # particle_list.append(len(particle_list))
+                                        # particle_list[len(particle_list)-1] = particles(float(newpos) % board_width, floor(float(newpos)/board_width)) # create particle
                                 else:
                                     grid[newpos] = grid[currentpos]
                                 grid[currentpos] = 0
@@ -788,14 +812,7 @@ while run:
             # print(new_block_pos)
 
         else: 
-            screen.blit(sprites["gameover"], ((SCREEN_WIDTH-pygame.Surface.get_width(sprites["gameover"]))/2, (SCREEN_HEIGHT-pygame.Surface.get_height(sprites["gameover"]))/2))
-
-            if keyjp[pygame.K_LEFT] == True:
-                selected = "restart"
-            if keyjp[pygame.K_RIGHT] == True:
-                selected = "exit"
-                
-                                
+            ui("game_over")
             # menu = "main"
     
         # moused, mousedy = pygame.mouse.get_rel()
