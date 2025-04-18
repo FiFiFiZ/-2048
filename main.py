@@ -2,21 +2,6 @@ import pygame
 from math import *
 from random import *
 
-import pygame.surface
-
-# Concept: 2048 but with Negative Blocks, Divide Blocks, allowing for different outcomes and contraptions. Try to get to -2048!
-# Maybe a specific square in the grid could have diffeerent effects on whatever block passes on it, giving a whole new layer of strategy and planning.
-# A funny condition like "if you get a 64, you lose (you have to work things around to not get that)"
-
-# remove blocks from fade list or add a fade to every single grid cell
-# a block like the negator could take effect only when a block collides with it, maybe other blocks could be ghost
-# a block that throws a square coming across it to another direction
-
-# fix merging more than 2 blocks at once working only on certain directions
-# fix big number blocks (that don't have a texture size of 30x30) to match correct position (and blit properly, maybe just make them 30x30 too)
-
-# mute sound feature
-
 # Initial Setup
 pygame.init()
 
@@ -24,8 +9,6 @@ run = True
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((120,150))
 pygame.display.set_icon(pygame.image.load("src\images\sprites\-1.png"))
-
-
 
 # Load Sprites and Initialize Variables
 sprites = {
@@ -65,14 +48,14 @@ for i in range (11): # powers of 2
 
 print(possible_integers)
 
-for i in range (len(possible_integers)):
+for i in range (len(possible_integers)): # loads all numbered squares
     sprites[str(possible_integers[i])] = pygame.Surface.convert(pygame.image.load(f"src\images\sprites\{possible_integers[i]}.png")) # load all number sprites
 
-for i in range (10):
+for i in range (10): # loads all font numbers
     idx = r"src\images\ui\font\txt" + str(i) + ".png"
     sprites[f"txt{i}"] = pygame.Surface.convert(pygame.image.load(idx))
 
-menu = "main"
+menu = "main" 
 pygame.display.set_caption("-2048")
 pygame.mixer.music.load("src\music\SNES Classic Edition Menu Song.mp3") 
 pygame.mixer.music.play(-1)
@@ -88,13 +71,13 @@ sounds = {
 channels = {
 }
 
-for i in range (3):
+for i in range (3): # initialize sound channels
     channels[i] = pygame.mixer.Channel(i)
     channels[i].set_volume(0.1)
 
 mousec = 0
 mousem = 0
-non_collidables = [0, "minus"] # blocks that can't be collided with
+non_collidables = [0, "minus"] # block values that can't be collided with
 selected = "" # selected button on ui
 selected_time = 0
 board_width = 4
@@ -110,7 +93,7 @@ class particles():
         self.ys = randint(-3,2)
         self.img = sprites["particle" + str(randint(0,2))]
         self.transparency = 0
-    def particle(p):
+    def particle(p): # frame iterations of particles
         p.xs = p.xs * 0.97
         p.ys += 0.4
         p.x += p.xs
@@ -148,30 +131,27 @@ def setup(setup_menu):
     for i in range (board_width * board_height) :
         grid.append(0)
         special_grid.append(0)
-    # print(setup_menu)
-    # if setup_menu == "in-game":
-    #     print(board_width)
-    #     exit()
 
     # Reset Variables
     kbinp = "" # last keyboard input
-    new_block_pos = []
-    new_block_fade = 255
+    new_block_pos = [] # new block positions (used for fading in new blocks)
+    new_block_fade = 255 
     level = 2 # this is the rng cap (when reaching higher numbers, it increases the integer cap, this way you can only get integers you've already gotten before)
     game_lost = 0
-    score = 0   
+    score = 0
     already_merged = []
-    todraw_size = 1
-    layout = "mouse"
+    todraw_size = 1 # merge size animation 
+    layout = "mouse" # ui control layout
 
+    # Spawn two initial blocks
     spawn("")
     spawn("")
 
-def ui(type):
+def ui(type): # Manage UI
     global layout, selected
-    if type == "main":
-        screen.blit(pygame.transform.scale_by(sprites["logo"], 1.5), ((SCREEN_WIDTH/2-centertext(sprites["logo"])*1.5),17.5+sin(pygame.time.get_ticks()/200)*3.5))
-        button("ps", SCREEN_WIDTH/2-centertext(sprites["ps"]), SCREEN_HEIGHT-30)
+    if type == "main": # Home Menu
+        screen.blit(pygame.transform.scale_by(sprites["logo"], 1.5), ((SCREEN_WIDTH/2-centertext(sprites["logo"])*1.5),17.5+sin(pygame.time.get_ticks()/200)*3.5)) # Logo
+        button("ps", SCREEN_WIDTH/2-centertext(sprites["ps"]), SCREEN_HEIGHT-30) # Start Button
         if keyjp[pygame.K_UP] == True:
             if selected == "bh":
                 selected = "bw"
@@ -196,9 +176,9 @@ def ui(type):
             layout = "kb"
         elif mousem > 0:
             layout = "mouse"
-        ui("bw")
-        ui("bh")
-        button("mutev", floor(SCREEN_WIDTH/2-centertext(sprites[f"MUTE VOLUME10"])), floor(SCREEN_HEIGHT/2+25))
+        ui("bw") # Board Width Select
+        ui("bh") # Board Height Select
+        button("mutev", floor(SCREEN_WIDTH/2-centertext(sprites[f"MUTE VOLUME10"])), floor(SCREEN_HEIGHT/2+25)) # Volume Button
 
     elif type == "bw" or type == "bh":
         if type == "bw":
@@ -222,10 +202,10 @@ def ui(type):
             del replace_gray
             screen.blit(sprites[f"txt{str(val)[i]}"], ((SCREEN_WIDTH/2-centertext(sprites["txt1"])-offset+4*((x_offs+3)+i*2)) ,SCREEN_HEIGHT/2-y_offs))
             replace_gray = pygame.PixelArray(sprites[f"txt{str(val)[i]}"])
-            replace_gray.replace((110,110,110), (255, 255, 255))
+            replace_gray.replace((110,110,110), (255, 255, 255)) # set number back to white for other uses
             del replace_gray
         
-    elif type == "game_over":
+    elif type == "game_over": # Game Over UI
         screen.blit(sprites["gameover"], ((SCREEN_WIDTH-pygame.Surface.get_width(sprites["gameover"]))/2, (SCREEN_HEIGHT-pygame.Surface.get_height(sprites["gameover"]))/2))
         if keyjp[pygame.K_LEFT] == True:
             if selected != "restart":
@@ -237,7 +217,7 @@ def ui(type):
             selected = "exit"
     
 
-def button (name, x ,y):
+def button (name, x ,y): # Button Scripts
     global menu, mousec, selected_time, board_width, board_height, keyjp, mutev, layout
 
     x_sprite, y_sprite = pygame.mouse.get_pos()
@@ -693,7 +673,7 @@ while run:
     if menu == "in-game":
 
         rendergrid()
-        print(f"PARTICLELIST: {particle_list}")
+        # print(f"PARTICLELIST: {particle_list}")
         for i in range (len(particle_list)):
             execute = particle_list[i].particle()
             if execute == "kill":
